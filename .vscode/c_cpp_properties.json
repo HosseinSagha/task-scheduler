@@ -1,0 +1,17 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "configurationProvider": "ms-vscode.cmake-tools",
+            "intelliSenseMode": "windows-gcc-arm",
+            "defines": [
+                "true=1",
+                "false=0",
+                "nullptr=NULL",
+                "constexpr=const"
+            ],
+            "mergeConfigurations": true
+        }
+    ],
+    "version": 4
+}
