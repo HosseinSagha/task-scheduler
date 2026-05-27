@@ -8,8 +8,9 @@
         "*.tpp": "cpp",
         "*.in": "cpp"
     },
+    "files.eol": "\n",
     "editor.formatOnSave": true,
-    "editor.formatOnSaveMode": "modifications",
+    "editor.formatOnSaveMode": "file",
     "clang-format.executable": "clang-format",
     "gitHistory.includeRemoteBranches": true,
     "git.autofetch": "all",
@@ -17,7 +18,11 @@
     "git.postCommitCommand": "push",
     "git.pruneOnFetch": true,
     "git.pullBeforeCheckout": true,
-    "markdown.extension.preview.autoShowPreviewToSide": true,
+    "cmake.useCMakePresets": "always",
+    "cmake.sourceDirectory": "${workspaceFolder}/test",
+    "cmake.debugConfig": {
+        "cwd": "${workspaceFolder}/test",
+    },
     "cmake.options.advanced": {
         "configurePreset": {
             "statusBarVisibility": "visible"
@@ -32,19 +37,18 @@
             "statusBarVisibility": "visible"
         },
         "debug": {
-            "statusBarVisibility": "hidden"
+            "statusBarVisibility": "visible"
         },
         "launch": {
-            "statusBarVisibility": "hidden"
+            "statusBarVisibility": "visible"
         }
     },
-    "cortex-debug.variableUseNaturalFormat": true,
-    "C_Cpp.doxygen.generateOnType": true,
-    "C_Cpp.doxygen.generatedStyle": "///",
-    "workbench.editor.enablePreview": false,
-    "files.eol": "\n",
     "[cmake]": {
         "editor.formatOnSave": true,
         "editor.defaultFormatter": "wysaid.clion-cmake-format"
-    }
+    },
+    "C_Cpp.intelliSenseEngine": "default",
+    "C_Cpp.doxygen.generateOnType": true,
+    "C_Cpp.doxygen.generatedStyle": "///",
+    "workbench.editor.enablePreview": false,
 }

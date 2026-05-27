@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 [[maybe_unused]] constexpr uint32_t Scheduler_stopPeriodicTask = UINT32_MAX; ///< Special value to stop a periodic task.
+[[maybe_unused]] constexpr uint32_t Scheduler_OneShotTask = UINT32_MAX; ///< Special value to start a one-shot task.
 
 /// Scheduler task priority levels.
 /// Tasks with Front priorities are added to the front of the queue of the priority level.
@@ -22,9 +23,11 @@ typedef enum
     Scheduler_TaskPriority_veryHighFront,
 
     Scheduler_TaskPriority_immediate, ///< Not queued and executed directly from main.
-    Scheduler_TaskPriority_interrupt, ///< Not queued and executed directly from interrupt (for short interrupt
-                                      ///< handlers).
-    Scheduler_TaskPriority_none,      ///< For no task e.g. null dma interrupt callback in spi session.
+    Scheduler_TaskPriority_interrupt =
+        Scheduler_TaskPriority_immediate, ///< Not queued and executed directly from interrupt (for short interrupt
+                                          ///< handlers). It is the same as immediate, just a different notation for
+                                          ///< interrupt context.
+    Scheduler_TaskPriority_none,          ///< For no task e.g. null dma interrupt callback in spi session.
 } Scheduler_TaskPriority;
 
 /// Task callback function type.
@@ -59,11 +62,11 @@ struct Scheduler
     /// full ticks pass before the first execution.
     /// \return Task ID on success (>=1, taskID=0 is reserved for uninitialised), -1 if the periodic task list is
     ///         full or if period_ms/initialDelay_ms tick calculation overflows int32_t.
-    [[nodiscard]] int32_t (*addPeriodicTask)(const SchedulerIface scheduler,
-                                             const Scheduler_TaskNoCtxCb_t taskNoCtxCb,
-                                             const Scheduler_TaskPriority taskPriority,
-                                             const uint32_t period_ms,
-                                             const uint32_t initialDelay_ms);
+    int32_t (*addPeriodicTask)(const SchedulerIface scheduler,
+                               const Scheduler_TaskNoCtxCb_t taskNoCtxCb,
+                               const Scheduler_TaskPriority taskPriority,
+                               const uint32_t period_ms,
+                               const uint32_t initialDelay_ms);
 
     /// Add a periodic task to the scheduler with context pointers (not interrupt-safe).
     /// \param scheduler Scheduler interface.
@@ -79,13 +82,13 @@ struct Scheduler
     /// \param ctx2 optional context pointer 2 for the task.
     /// \return Task ID on success (>=1, taskID=0 is reserved for uninitialised), -1 if the periodic task list is
     ///         full or if period_ms/initialDelay_ms tick calculation overflows int32_t.
-    [[nodiscard]] int32_t (*addPeriodicTaskWithCtx)(const SchedulerIface scheduler,
-                                                    const Scheduler_TaskWithCtxCb_t taskWithCtxCb,
-                                                    const Scheduler_TaskPriority taskPriority,
-                                                    const uint32_t period_ms,
-                                                    const uint32_t initialDelay_ms,
-                                                    void *const ctx1,
-                                                    void *const ctx2);
+    int32_t (*addPeriodicTaskWithCtx)(const SchedulerIface scheduler,
+                                      const Scheduler_TaskWithCtxCb_t taskWithCtxCb,
+                                      const Scheduler_TaskPriority taskPriority,
+                                      const uint32_t period_ms,
+                                      const uint32_t initialDelay_ms,
+                                      void *const ctx1,
+                                      void *const ctx2);
 
     /// Update the period of an existing periodic task. It can be called from the task itself.
     /// Task must be stopped first (period_ms=Scheduler_stopPeriodicTask) before changing to a new running period.
@@ -98,10 +101,10 @@ struct Scheduler
     /// \return true if the period was updated successfully or taskId=0 (uninitialised). false if taskId is out of
     ///         range, if the task is currently running and the new period is not Scheduler_stopPeriodicTask, or if
     ///         tick calculation overflows.
-    [[nodiscard]] bool (*updatePeriodicTask)(const SchedulerIface scheduler,
-                                             const int32_t taskId,
-                                             const uint32_t newPeriod_ms,
-                                             const uint32_t initialDelay_ms);
+    bool (*updatePeriodicTask)(const SchedulerIface scheduler,
+                               const int32_t taskId,
+                               const uint32_t newPeriod_ms,
+                               const uint32_t initialDelay_ms);
 
     /// Add a task to the scheduler queue from a timer interrupt.
     /// \param scheduler Scheduler interface.
@@ -110,9 +113,9 @@ struct Scheduler
     /// \param taskPriority Priority of the task.
     /// \return true if the task was added to the queue, false if the queue was full or if the task was executed
     ///         directly (Scheduler_TaskPriority_immediate or Scheduler_TaskPriority_interrupt).
-    [[nodiscard]] bool (*addTask)(const SchedulerIface scheduler,
-                                  const Scheduler_TaskNoCtxCb_t taskNoCtxCb,
-                                  const Scheduler_TaskPriority taskPriority);
+    bool (*addTask)(const SchedulerIface scheduler,
+                    const Scheduler_TaskNoCtxCb_t taskNoCtxCb,
+                    const Scheduler_TaskPriority taskPriority);
 
     /// Add a task to the scheduler queue from a timer interrupt passing context pointers.
     /// \param scheduler Scheduler interface.
@@ -125,11 +128,11 @@ struct Scheduler
     /// change by taskWithCtxCb and read in main thread, or vice versa, must be declared volatile.
     /// \return true if the task was added to the queue, false if the queue was full or if the task was executed
     ///         directly (Scheduler_TaskPriority_immediate or Scheduler_TaskPriority_interrupt).
-    [[nodiscard]] bool (*addTaskWithCtx)(const SchedulerIface scheduler,
-                                         const Scheduler_TaskWithCtxCb_t taskWithCtxCb,
-                                         const Scheduler_TaskPriority taskPriority,
-                                         void *const ctx1,
-                                         void *const ctx2);
+    bool (*addTaskWithCtx)(const SchedulerIface scheduler,
+                           const Scheduler_TaskWithCtxCb_t taskWithCtxCb,
+                           const Scheduler_TaskPriority taskPriority,
+                           void *const ctx1,
+                           void *const ctx2);
 
     /// Run the scheduler in the main loop (not for ISR).
     /// \param scheduler Scheduler interface.
@@ -140,4 +143,5 @@ struct Scheduler
 /// \param tickPeriod_ms Scheduler tick period in milliseconds.
 /// \param enterSleepModeCb Callback function to enter sleep mode.
 /// \return Instance of the scheduler, or nullptr if maximum number of schedulers is reached or tickPeriod_ms=0.
+[[nodiscard("store the returned interface; nullptr means maximum scheduler count reached or tickPeriod_ms=0")]]
 SchedulerIface Scheduler_create(const uint32_t tickPeriod_ms, const Scheduler_EnterSleepModeCb_t enterSleepModeCb);

@@ -1,7 +1,7 @@
 #include "scheduler.h"
-//#include "systemView.h"
-#include "utility.h"
+// #include "systemView.h"
 #include "core.h"
+#include "utility.h"
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -14,7 +14,8 @@ constexpr size_t queueSizeMask = (queueSize - 1);
 static_assert((queueSize & queueSizeMask) == 0, "QUEUE_SIZE must be a power of 2");
 
 constexpr int32_t stopPeriodicTaskTicks = INT32_MIN;
-constexpr int32_t minPendingTicks = (stopPeriodicTaskTicks + 1); // Saturation floor to prevent collision with stop sentinel
+constexpr int32_t minPendingTicks =
+    (stopPeriodicTaskTicks + 1); // Saturation floor to prevent collision with stop sentinel
 
 typedef union
 {
@@ -87,24 +88,17 @@ static int32_t addPeriodicTaskWithCtx(const SchedulerIface scheduler,
 /// Convert period in milliseconds to ticks, rounding up to ensure at least the specified number of full ticks.
 /// \param period_ms Period in milliseconds. period_ms=0 rounds up to 1 tick.
 /// \param tickPeriod_ms Tick period in milliseconds.
-/// \param periodTicksOut Output parameter for the calculated period in ticks. Valid only if function returns true.
-/// \return true if conversion was successful, false if the resulting tick count would overflow int32_t.
-static bool convertPeriodMsToTicks(const uint32_t period_ms,
-                                   const uint32_t tickPeriod_ms,
-                                   int32_t *const periodTicksOut);
+/// \return Tick count (>=1) on success, 0 if the result would overflow int32_t.
+static int32_t convertPeriodMsToTicks(uint32_t period_ms, uint32_t tickPeriod_ms) [[unsequenced]];
 
-/// Convert initial delay in milliseconds to ticks until go, rounding up to ensure at least the specified number of full
-/// ticks. The output ticksUntilGo includes one extra tick count for the first ISR decrement, so the task fires no
-/// earlier than the requested delay.
-/// \param initialDelay_ms Initial delay in milliseconds. initialDelay_ms=0 means fire on the next tick (no explicit
-/// delay), initialDelay_ms>0 rounds up to nearest tick to ensure at least that many full ticks pass before firing.
+/// Convert initial delay in milliseconds to ticks until go, rounding up to ensure at least the specified number of
+/// full ticks. The returned value includes one extra tick for the first ISR decrement so the task fires no earlier
+/// than the requested delay.
+/// \param initialDelay_ms Initial delay in milliseconds. 0 means fire on the next tick.
 /// \param tickPeriod_ms Tick period in milliseconds.
-/// \param ticksUntilGoOut Output parameter for the calculated ticks until go. Valid only if function returns true.
-/// ticksUntilGoOut will be at least 1 (fires on next tick when initialDelay_ms=0).
-/// \return true if conversion was successful, false if the resulting tick count would overflow int32_t.
-static bool convertInitialDelayMsToTicksUntilGo(const uint32_t initialDelay_ms,
-                                                const uint32_t tickPeriod_ms,
-                                                int32_t *const ticksUntilGoOut);
+/// \return Ticks until go (>=1) on success, 0 if the result would overflow int32_t.
+static int32_t convertInitialDelayMsToTicksUntilGo(uint32_t initialDelay_ms,
+                                                   uint32_t tickPeriod_ms) [[unsequenced]];
 
 /// Add a periodic task to the scheduler's periodic task list.
 /// This is an internal helper function called by both addPeriodicTask and addPeriodicTaskWithCtx.
@@ -121,13 +115,13 @@ static bool convertInitialDelayMsToTicksUntilGo(const uint32_t initialDelay_ms,
 /// \return Task ID on success (>=1, taskID=0 is reserved), -1 if the periodic task list is full or if
 ///         period_ms/initialDelay_ms tick calculation overflows int32_t.
 static int32_t addToPeriodicList(const SchedulerIface scheduler,
-                                        const TaskCb taskCb,
-                                        const Scheduler_TaskPriority taskPriority,
-                                        const uint32_t period_ms,
-                                        const uint32_t initialDelay_ms,
-                                        const bool hasCtx,
-                                        void *const ctx1,
-                                        void *const ctx2);
+                                 const TaskCb taskCb,
+                                 const Scheduler_TaskPriority taskPriority,
+                                 const uint32_t period_ms,
+                                 const uint32_t initialDelay_ms,
+                                 const bool hasCtx,
+                                 void *const ctx1,
+                                 void *const ctx2);
 static void timerIsrHandler(const SchedulerIface scheduler);
 static bool addTask(const SchedulerIface scheduler,
                     const Scheduler_TaskNoCtxCb_t taskNoCtxCb,
@@ -148,12 +142,12 @@ static bool addTaskWithCtx(const SchedulerIface scheduler,
 /// \return true if the task was added to the queue, false if the queue was full or if the task was executed
 ///         directly (interrupt/immediate priority).
 static bool addToQueue(const SchedulerIface scheduler,
-                              const TaskCb taskCb,
-                              Scheduler_TaskPriority taskPriority,
-                              const int32_t taskID,
-                              const bool hasCtx,
-                              void *const ctx1,
-                              void *const ctx2);
+                       const TaskCb taskCb,
+                       Scheduler_TaskPriority taskPriority,
+                       const int32_t taskID,
+                       const bool hasCtx,
+                       void *const ctx1,
+                       void *const ctx2);
 static bool updatePeriodicTask(const SchedulerIface scheduler,
                                const int32_t taskID,
                                const uint32_t newPeriod_ms,
@@ -171,8 +165,8 @@ SchedulerIface Scheduler_create(const uint32_t tickPeriod_ms, const Scheduler_En
         return nullptr;
     }
 
-    SchedulerIface scheduler = &schedulers[schedulerIndex].scheduler;
-    VarsPtr varsPtr = &schedulers[schedulerIndex].vars;
+    auto scheduler = &schedulers[schedulerIndex].scheduler;
+    auto varsPtr = &schedulers[schedulerIndex].vars;
     ++schedulerIndex;
 
     scheduler->vars = varsPtr;
@@ -192,9 +186,9 @@ SchedulerIface Scheduler_create(const uint32_t tickPeriod_ms, const Scheduler_En
 
 static int32_t addPeriodicTask(const SchedulerIface scheduler,
                                const Scheduler_TaskNoCtxCb_t taskNoCtxCb,
-                        const Scheduler_TaskPriority taskPriority,
-                        const uint32_t period_ms,
-                        const uint32_t initialDelay_ms)
+                               const Scheduler_TaskPriority taskPriority,
+                               const uint32_t period_ms,
+                               const uint32_t initialDelay_ms)
 {
     assert(taskNoCtxCb != nullptr);
 
@@ -210,11 +204,11 @@ static int32_t addPeriodicTask(const SchedulerIface scheduler,
 
 static int32_t addPeriodicTaskWithCtx(const SchedulerIface scheduler,
                                       const Scheduler_TaskWithCtxCb_t taskWithCtxCb,
-                               const Scheduler_TaskPriority taskPriority,
-                               const uint32_t period_ms,
-                               const uint32_t initialDelay_ms,
-                               void *const ctx1,
-                               void *const ctx2)
+                                      const Scheduler_TaskPriority taskPriority,
+                                      const uint32_t period_ms,
+                                      const uint32_t initialDelay_ms,
+                                      void *const ctx1,
+                                      void *const ctx2)
 {
     assert(taskWithCtxCb != nullptr);
 
@@ -229,17 +223,17 @@ static int32_t addPeriodicTaskWithCtx(const SchedulerIface scheduler,
 }
 
 static int32_t addToPeriodicList(const SchedulerIface scheduler,
-                                const TaskCb taskCb,
-                          const Scheduler_TaskPriority taskPriority,
-                          const uint32_t period_ms,
-                          const uint32_t initialDelay_ms,
-                          const bool hasCtx,
-                          void *const ctx1,
-                          void *const ctx2)
+                                 const TaskCb taskCb,
+                                 const Scheduler_TaskPriority taskPriority,
+                                 const uint32_t period_ms,
+                                 const uint32_t initialDelay_ms,
+                                 const bool hasCtx,
+                                 void *const ctx1,
+                                 void *const ctx2)
 {
     assert(taskPriority < Scheduler_TaskPriority_none);
 
-    const VarsPtr restrict varsPtr = scheduler->vars;
+    const VarsPtr restrict varsPtr = (Vars *)scheduler->vars;
 
     // Precalculate period ticks outside critical section to minimize lock time
     int32_t periodTicks;
@@ -251,14 +245,15 @@ static int32_t addToPeriodicList(const SchedulerIface scheduler,
         periodTicks = stopPeriodicTaskTicks;
 
         // One-shot task: compute delay from initialDelay_ms, auto-stops after firing.
-        // If initialDelay_ms is also 0, task starts fully stopped (existing behavior).
+        // If initialDelay_ms is also 0, task starts fully stopped (existing behaviour).
         if (initialDelay_ms == 0U)
         {
             ticksUntilGo = stopPeriodicTaskTicks;
         }
         else
         {
-            if (UNLIKELY(!convertInitialDelayMsToTicksUntilGo(initialDelay_ms, tickPeriod, &ticksUntilGo)))
+            ticksUntilGo = convertInitialDelayMsToTicksUntilGo(initialDelay_ms, tickPeriod);
+            if (UNLIKELY(ticksUntilGo == 0))
             {
                 return -1;
             }
@@ -267,8 +262,9 @@ static int32_t addToPeriodicList(const SchedulerIface scheduler,
     else
     {
         // Calculate ticks: ensure at least the specified number of full ticks pass.
-        if (UNLIKELY(!convertPeriodMsToTicks(period_ms, tickPeriod, &periodTicks) ||
-                     !convertInitialDelayMsToTicksUntilGo(initialDelay_ms, tickPeriod, &ticksUntilGo)))
+        periodTicks = convertPeriodMsToTicks(period_ms, tickPeriod);
+        ticksUntilGo = convertInitialDelayMsToTicksUntilGo(initialDelay_ms, tickPeriod);
+        if (UNLIKELY(periodTicks == 0 || ticksUntilGo == 0))
         {
             return -1;
         }
@@ -305,8 +301,8 @@ static int32_t addToPeriodicList(const SchedulerIface scheduler,
 
 static bool updatePeriodicTask(const SchedulerIface scheduler,
                                const int32_t taskID,
-                        const uint32_t newPeriod_ms,
-                        const uint32_t initialDelay_ms)
+                               const uint32_t newPeriod_ms,
+                               const uint32_t initialDelay_ms)
 {
     // Validate taskID
     if (UNLIKELY(taskID == 0))
@@ -337,8 +333,9 @@ static bool updatePeriodicTask(const SchedulerIface scheduler,
     {
         // Calculate new period
         const uint32_t tickPeriod = varsPtr->tickPeriod_ms;
-        if (UNLIKELY(!convertPeriodMsToTicks(newPeriod_ms, tickPeriod, &newTicks) ||
-                     !convertInitialDelayMsToTicksUntilGo(initialDelay_ms, tickPeriod, &ticksUntilGo)))
+        newTicks = convertPeriodMsToTicks(newPeriod_ms, tickPeriod);
+        ticksUntilGo = convertInitialDelayMsToTicksUntilGo(initialDelay_ms, tickPeriod);
+        if (UNLIKELY(newTicks == 0 || ticksUntilGo == 0))
         {
             return false;
         }
@@ -381,32 +378,30 @@ static bool updatePeriodicTask(const SchedulerIface scheduler,
     return true;
 }
 
-static bool convertPeriodMsToTicks(const uint32_t period_ms, const uint32_t tickPeriod_ms, int32_t *const periodTicksOut)
+static int32_t convertPeriodMsToTicks(const uint32_t period_ms, const uint32_t tickPeriod_ms) [[unsequenced]] 
 {
     const uint32_t periodTicks_u32 = (period_ms == 0U) ? 1U : ((period_ms - 1U) / tickPeriod_ms + 1U);
     if (UNLIKELY(periodTicks_u32 > (uint32_t)INT32_MAX))
     {
-        return false;
+        return 0; // Overflow sentinel
     }
 
-    *periodTicksOut = (int32_t)periodTicks_u32;
-    return true;
+    return (int32_t)periodTicks_u32;
 }
 
-static bool convertInitialDelayMsToTicksUntilGo(const uint32_t initialDelay_ms,
-                                                const uint32_t tickPeriod_ms,
-                                         int32_t *const ticksUntilGoOut)
+static int32_t convertInitialDelayMsToTicksUntilGo(const uint32_t initialDelay_ms,
+                                                                    const uint32_t tickPeriod_ms) [[unsequenced]] 
 {
-    const uint32_t initialDelayTicks_u32 = (initialDelay_ms == 0U) ? 0U : ((initialDelay_ms - 1U) / tickPeriod_ms + 1U);
+    const uint32_t initialDelayTicks_u32 =
+        (initialDelay_ms == 0U) ? 0U : ((initialDelay_ms - 1U) / tickPeriod_ms + 1U);
 
-    // Keep one extra count for the first decrement tick.
+    // Add one extra count for the first decrement tick.
     if (UNLIKELY(initialDelayTicks_u32 >= (uint32_t)INT32_MAX))
     {
-        return false;
+        return 0; // Overflow sentinel
     }
 
-    *ticksUntilGoOut = (int32_t)(initialDelayTicks_u32 + 1U);
-    return true;
+    return (int32_t)(initialDelayTicks_u32 + 1U);
 }
 
 static void timerIsrHandler(const SchedulerIface scheduler)
@@ -487,7 +482,7 @@ static void timerIsrHandler(const SchedulerIface scheduler)
 
 static bool addTask(const SchedulerIface scheduler,
                     const Scheduler_TaskNoCtxCb_t taskNoCtxCb,
-             const Scheduler_TaskPriority taskPriority)
+                    const Scheduler_TaskPriority taskPriority)
 {
     assert(taskNoCtxCb != nullptr);
 
@@ -496,9 +491,9 @@ static bool addTask(const SchedulerIface scheduler,
 
 static bool addTaskWithCtx(const SchedulerIface scheduler,
                            const Scheduler_TaskWithCtxCb_t taskWithCtxCb,
-                    const Scheduler_TaskPriority taskPriority,
-                    void *const ctx1,
-                    void *const ctx2)
+                           const Scheduler_TaskPriority taskPriority,
+                           void *const ctx1,
+                           void *const ctx2)
 {
     assert(taskWithCtxCb != nullptr);
 
@@ -507,11 +502,11 @@ static bool addTaskWithCtx(const SchedulerIface scheduler,
 
 static bool addToQueue(const SchedulerIface scheduler,
                        const TaskCb taskCb,
-                Scheduler_TaskPriority taskPriority,
-                const int32_t taskID,
-                const bool hasCtx,
-                void *const ctx1,
-                void *const ctx2)
+                       Scheduler_TaskPriority taskPriority,
+                       const int32_t taskID,
+                       const bool hasCtx,
+                       void *const ctx1,
+                       void *const ctx2)
 {
     assert(taskPriority < Scheduler_TaskPriority_none);
 
@@ -609,7 +604,7 @@ static void run(const SchedulerIface scheduler)
         return;
     }
 
-//    SYSVIEW_EXIT_ISR_TO_SCHEDULER(); // Mark resuming from interrupt
+    //    SYSVIEW_EXIT_ISR_TO_SCHEDULER(); // Mark resuming from interrupt
 
     // Find highest priority task using CLZ (O(1) on ARM Cortex-M)
     const Scheduler_TaskPriority highestPriority = (Scheduler_TaskPriority)(31U - (uint32_t)COUNTL_ZERO(priorityBits));
@@ -683,5 +678,5 @@ static void run(const SchedulerIface scheduler)
         varsPtr->periodicTasks[taskIndex].isPending = false;
     }
 
-//    SYSVIEW_IDLE(); // Mark idle state after task completion
+    //    SYSVIEW_IDLE(); // Mark idle state after task completion
 }
