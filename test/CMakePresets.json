@@ -2,28 +2,30 @@
     "version": 6,
     "configurePresets": [
         {
-            "name": "generic-32",
+            "name": "Default",
             "hidden": true,
             "generator": "Ninja",
             "toolchainFile": "${sourceDir}/../../toolchain-gnu/generic-32.cmake",
+            "binaryDir": "${sourceDir}/build/${presetName}",
             "cacheVariables": {
-                "CMAKE_EXPORT_COMPILE_COMMANDS": "TRUE"
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+            },
+            "warnings": {
+                "dev": false
             }
         },
         {
             "name": "debug",
-            "displayName": "Debug (Generic-32, Ninja)",
-            "inherits": "generic-32",
-            "binaryDir": "${sourceDir}/build/debug",
+            "displayName": "Debug (GNU-32, Ninja)",
+            "inherits": "Default",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug"
             }
         },
         {
             "name": "release",
-            "displayName": "Release (Generic-32, Ninja)",
-            "inherits": "generic-32",
-            "binaryDir": "${sourceDir}/build/release",
+            "displayName": "Release (GNU-32, Ninja)",
+            "inherits": "Default",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
             }
