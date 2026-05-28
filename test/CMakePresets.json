@@ -5,7 +5,6 @@
             "name": "Default",
             "hidden": true,
             "generator": "Ninja",
-            "toolchainFile": "${sourceDir}/../../toolchain-gnu/generic-32.cmake",
             "binaryDir": "${sourceDir}/build/${presetName}",
             "cacheVariables": {
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
