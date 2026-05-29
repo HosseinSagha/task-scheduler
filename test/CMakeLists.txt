@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 project(task-scheduler-test
         LANGUAGES C
-)
+       )
 
 # Pull in the scheduler library from the repo root.
 add_subdirectory(.. ..)
