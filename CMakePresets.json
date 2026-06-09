@@ -12,7 +12,7 @@
         },
         {
             "name": "debug",
-            "displayName": "Debug (GNU-32, Ninja)",
+            "displayName": "Debug",
             "inherits": "Default",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug"
@@ -20,11 +20,29 @@
         },
         {
             "name": "release",
-            "displayName": "Release (GNU-32, Ninja)",
+            "displayName": "Release",
             "inherits": "Default",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
             }
+        },
+        {
+            "name": "debug-test",
+            "displayName": "Debug Test",
+            "inherits": "Default",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "BUILD_TESTS": "ON"
+            }
+        },
+        {
+            "name": "release-test",
+            "displayName": "Release Test",
+            "inherits": "Default",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "BUILD_TESTS": "ON"
+            }      
         }
     ],
     "buildPresets": [
@@ -35,6 +53,14 @@
         {
             "name": "Release",
             "configurePreset": "release"
+        },
+        {
+            "name": "Debug Test",
+            "configurePreset": "debug-test"
+        },
+        {
+            "name": "Release Test",
+            "configurePreset": "release-test"
         }
     ]
 }

@@ -19,7 +19,6 @@
     "git.pruneOnFetch": true,
     "git.pullBeforeCheckout": true,
     "cmake.useCMakePresets": "always",
-    "cmake.sourceDirectory": "${workspaceFolder}/test",
     "cmake.debugConfig": {
         "cwd": "${workspaceFolder}/test",
     },

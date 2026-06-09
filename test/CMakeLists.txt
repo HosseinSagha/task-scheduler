@@ -1,12 +1,10 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(task-scheduler-test
-        LANGUAGES C
-       )
+if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    message(STATUS "Building task-scheduler test project.")
+    project(task-scheduler-test LANGUAGES C)
+    add_subdirectory(.. lib)
+endif ()
 
-# Pull in the scheduler library from the repo root.
-add_subdirectory(.. ..)
-
-add_executable(test main.c)
-
-target_link_libraries(test PRIVATE task-scheduler)
+add_executable(task-scheduler-test main.c)
+target_link_libraries(task-scheduler-test PRIVATE task-scheduler)
