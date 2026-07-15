@@ -1,6 +1,11 @@
 #pragma once
 
-#ifdef __STDC_VERSION_STDBIT_H__
+#ifdef __has_include
+    #if __has_include(<stdbit.h>)
+        #define HAS_STDBIT
+#endif
+
+#ifdef HAS_STDBIT
 #include <stdbit.h>
 
 #define COUNTR_ZERO(x) stdc_trailing_zeros_ul(x) // count trailing zeros
