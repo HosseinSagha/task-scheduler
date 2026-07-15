@@ -11,7 +11,7 @@ constexpr size_t periodicTaskListSize = 20;
 // Power of 2 for fast modulo operations (& instead of %)
 constexpr size_t queueSize = 32;
 constexpr size_t queueSizeMask = (queueSize - 1);
-static_assert((queueSize & queueSizeMask) == 0, "QUEUE_SIZE must be a power of 2");
+static_assert((queueSize != 0U) && ((queueSize & queueSizeMask) == 0U), "queueSize must be a power of 2");
 
 constexpr int32_t stopPeriodicTaskTicks = INT32_MIN;
 constexpr int32_t minPendingTicks =
@@ -97,8 +97,7 @@ static int32_t convertPeriodMsToTicks(uint32_t period_ms, uint32_t tickPeriod_ms
 /// \param initialDelay_ms Initial delay in milliseconds. 0 means fire on the next tick.
 /// \param tickPeriod_ms Tick period in milliseconds.
 /// \return Ticks until go (>=1) on success, 0 if the result would overflow int32_t.
-static int32_t convertInitialDelayMsToTicksUntilGo(uint32_t initialDelay_ms,
-                                                   uint32_t tickPeriod_ms) [[unsequenced]];
+static int32_t convertInitialDelayMsToTicksUntilGo(uint32_t initialDelay_ms, uint32_t tickPeriod_ms) [[unsequenced]];
 
 /// Add a periodic task to the scheduler's periodic task list.
 /// This is an internal helper function called by both addPeriodicTask and addPeriodicTaskWithCtx.
@@ -378,7 +377,7 @@ static bool updatePeriodicTask(const SchedulerIface scheduler,
     return true;
 }
 
-static int32_t convertPeriodMsToTicks(const uint32_t period_ms, const uint32_t tickPeriod_ms) [[unsequenced]] 
+static int32_t convertPeriodMsToTicks(const uint32_t period_ms, const uint32_t tickPeriod_ms) [[unsequenced]]
 {
     const uint32_t periodTicks_u32 = (period_ms == 0U) ? 1U : ((period_ms - 1U) / tickPeriod_ms + 1U);
     if (UNLIKELY(periodTicks_u32 > (uint32_t)INT32_MAX))
@@ -389,11 +388,10 @@ static int32_t convertPeriodMsToTicks(const uint32_t period_ms, const uint32_t t
     return (int32_t)periodTicks_u32;
 }
 
-static int32_t convertInitialDelayMsToTicksUntilGo(const uint32_t initialDelay_ms,
-                                                                    const uint32_t tickPeriod_ms) [[unsequenced]] 
+static int32_t convertInitialDelayMsToTicksUntilGo(const uint32_t initialDelay_ms, const uint32_t tickPeriod_ms)
+    [[unsequenced]]
 {
-    const uint32_t initialDelayTicks_u32 =
-        (initialDelay_ms == 0U) ? 0U : ((initialDelay_ms - 1U) / tickPeriod_ms + 1U);
+    const uint32_t initialDelayTicks_u32 = (initialDelay_ms == 0U) ? 0U : ((initialDelay_ms - 1U) / tickPeriod_ms + 1U);
 
     // Add one extra count for the first decrement tick.
     if (UNLIKELY(initialDelayTicks_u32 >= (uint32_t)INT32_MAX))
@@ -604,7 +602,7 @@ static void run(const SchedulerIface scheduler)
         return;
     }
 
-    //    SYSVIEW_EXIT_ISR_TO_SCHEDULER(); // Mark resuming from interrupt
+    // SYSVIEW_EXIT_ISR_TO_SCHEDULER(); // Mark resuming from interrupt
 
     // Find highest priority task using CLZ (O(1) on ARM Cortex-M)
     const Scheduler_TaskPriority highestPriority = (Scheduler_TaskPriority)(31U - (uint32_t)COUNTL_ZERO(priorityBits));
